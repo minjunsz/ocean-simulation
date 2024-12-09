@@ -32,9 +32,6 @@
 //
 
 uniform sampler2D depthTexture2D;
-uniform vec4 fogColourFarAtCurrentTime;
-uniform float fogDepthRadiusFar;
-uniform float fogDepthRadiusNear;
 uniform sampler2D localReflectionsTexture2D;
 uniform sampler2D localRefractionsTexture2D;
 uniform samplerCube skybox;
@@ -145,7 +142,6 @@ void main() {
     vec3 tintColourAtCurrentTime = clamp(sunPosition.y, 0.0f, 1.0f) * tintColourAtNoon;
 
     vec3 waterFresnelTransmissionColour = mix(tintColourAtCurrentTime, localRefractionColour.rgb, waterClarity * localRefractionColour.a * (1.0f - deltaDepthClamped));
-    //TODO: fix the sun reflection highlight colour to use the global reflection colour with a similar power scalar (in order to better handle atmosphere conditions like fog/overcast/clouds)
     vec3 waterFresnelReflectionColour = mix(skybox_reflection_colour.rgb + sun_reflection_colour.rgb, localReflectionColour.rgb, localReflectionColour.a);
 
     // output final fragment colour...
@@ -163,47 +159,4 @@ void main() {
     float edgeHardness = 0.0f == softEdgesDeltaDepthThreshold ? 1.0f : 1.0f - (hack_skybox_in_back * (1.0f - clamp(deltaDepthClamped / softEdgesDeltaDepthThreshold, 0.0f, 1.0f)));
     //NOTE: any water covering skybox area will have hard edges (otherwise, the grid would start to fade into a circle)
     colour.a = edgeHardness;
-
-    //TODO: in future this will be moved out into a post-process shader program
-    // apply fog...
-    vec4 fogColour = fogColourFarAtCurrentTime;
-    fogColour.a = viewVecDepthClamped >= fogDepthRadiusFar ? fogColour.a : viewVecDepthClamped <= fogDepthRadiusNear ? 0.0f : fogColour.a * ((viewVecDepthClamped - fogDepthRadiusNear) / (fogDepthRadiusFar - fogDepthRadiusNear));
-    colour.rgb = mix(colour.rgb, fogColour.rgb, fogColour.a);
-
-    //TODO: have UI toggles for these debug colours...
-    //colour = heightmap_colour;
-    //colour = vec4(viewVecDepthClamped, viewVecDepthClamped, viewVecDepthClamped, 1.0f);
-    //colour = vec4(uvViewportSpace.s, uvViewportSpace.t, uvViewportSpace.s * uvViewportSpace.t, 1.0f);
-    //colour = vec4(uvViewportSpaceHeight0.s, uvViewportSpaceHeight0.t, uvViewportSpaceHeight0.s * uvViewportSpaceHeight0.t, 1.0f);
-    //colour = vec4(depthFragBack, depthFragBack, depthFragBack, 1.0f);
-    //colour = vec4(depthFrag, depthFrag, depthFrag, 1.0f);
-    //colour = vec4(deltaDepthClamped, deltaDepthClamped, deltaDepthClamped, 1.0f);
-    //colour = vec4(R, 1.0f);
-    //colour = skybox_reflection_colour;
-    //TODO: add colour for specular highlight intensity
-    //colour = sun_reflection_colour;
-    //colour = vec4(fresnel_cos_theta, fresnel_cos_theta, fresnel_cos_theta, 1.0f);
-    //colour = vec4(fresnel_f_theta, fresnel_f_theta, fresnel_f_theta, 1.0f);
-    //colour = vec4(localReflectionsDistortionScalar, localReflectionsDistortionScalar, localReflectionsDistortionScalar, 1.0f);
-    //colour = vec4(localRefractionsDistortionScalar, localRefractionsDistortionScalar, localRefractionsDistortionScalar, 1.0f);
-    //colour = vec4(uvLocalReflections.s, uvLocalReflections.t, uvLocalReflections.s * uvLocalReflections.t, 1.0f);
-    //colour = vec4(uvLocalRefractions.s, uvLocalRefractions.t, uvLocalRefractions.s * uvLocalRefractions.t, 1.0f);
-    //colour = localReflectionColour;
-    //colour = vec4(localReflectionColour.a, localReflectionColour.a, localReflectionColour.a, 1.0f);
-    //colour = vec4(localReflectionColour.rgb, 1.0f);
-    //colour = localRefractionColour;
-    //colour = vec4(localRefractionColour.a, localRefractionColour.a, localRefractionColour.a, 1.0f);
-    //colour = vec4(localRefractionColour.rgb, 1.0f);
-    //colour = vec4(DEEP_TINT_COLOUR_AT_NOON, 1.0f);
-    //colour = vec4(SHALLOW_TINT_COLOUR_AT_NOON, 1.0f);
-    //colour = vec4(tintInterpolationFactor, tintInterpolationFactor, tintInterpolationFactor, 1.0f);
-    //colour = vec4(tintColourAtNoon, 1.0f);
-    //colour = vec4(tintColourAtCurrentTime, 1.0f);
-    //colour = vec4(waterFresnelTransmissionColour, 1.0f);
-    //colour = vec4(waterFresnelReflectionColour, 1.0f);
-    //colour = vec4(edgeHardness, edgeHardness, edgeHardness, 1.0f);
-    //colour = vec4(1.0f - edgeHardness, 1.0f - edgeHardness, 1.0f - edgeHardness, 1.0f);
-    //colour = fogColour;
-    //colour = vec4(fogColour.a, fogColour.a, fogColour.a, 1.0f);
-    //colour.a = 1.0f;
 }

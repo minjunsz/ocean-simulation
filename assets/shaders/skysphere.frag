@@ -72,7 +72,6 @@ void main() {
     //NOTE: this second factor is used to scale stars to be duller when close to sun position
     float skysphereAlpha_2 = (a_3 + 1.0f) / 2.0f;
     float skysphereAlpha = max(skysphereAlpha_1, skysphereAlpha_2);
-    //TODO: could add a clamped lower bound in order to simulate nightime overcast/fog, but everything looks good regardless
     colour = vec4(diffuseColour + specularColour, skysphereAlpha);
 
     // debug colours...

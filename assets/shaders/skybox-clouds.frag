@@ -33,7 +33,6 @@
 
 // used as a grayscale intensity threshold acting as a way to control the proportion of clouds from the skybox textures get drawn
 uniform float oneMinusCloudProportion;
-// used to scale both "fog/blur" of atmosphere and increase grayness of clouds
 uniform float overcastStrength;
 uniform samplerCube skyboxClouds;
 // the inverse light direction
@@ -62,9 +61,8 @@ void main() {
     colour = vec4(cloudColour, C_srgb > oneMinusCloudProportion ? (C_srgb - oneMinusCloudProportion) / (1.0f - oneMinusCloudProportion) : 0.0f);
 
     float a = clamp(sunPosition.y, 0.0f, 1.0f) * overcastStrength;
-    const vec3 FOG_COLOUR = vec3(0.5f, 0.5f, 0.5f);
 
-    colour = C_srgb > oneMinusCloudProportion ? mix(colour, grayscaleColour, a) : vec4(FOG_COLOUR, a);
+    colour = mix(colour, grayscaleColour, 0.0f);
 
     // debug colours...
     // grayscale

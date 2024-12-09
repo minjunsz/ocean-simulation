@@ -31,9 +31,6 @@
 //     OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-uniform vec4 fogColourFarAtCurrentTime;
-uniform float fogDepthRadiusFar;
-uniform float fogDepthRadiusNear;
 uniform bool hasNormals;
 uniform bool isTextured;
 // in view-space
@@ -65,11 +62,4 @@ void main() {
     // half-Lambert diffuse
     vec3 diffuseColour = hasNormals ? K_D * ((dot(N, L) + 1.0f) * 0.5f) * baseColour.rgb : baseColour.rgb;
     colour = vec4(diffuseColour, baseColour.a);
-
-    //TODO: in future this will be moved out into a post-process shader program
-    // apply fog...
-    vec4 fogColour = fogColourFarAtCurrentTime;
-    fogColour.a = worldSpaceDepth >= fogDepthRadiusFar ? fogColour.a : worldSpaceDepth <= fogDepthRadiusNear ? 0.0f : fogColour.a * ((worldSpaceDepth - fogDepthRadiusNear) / (fogDepthRadiusFar - fogDepthRadiusNear));
-    //TODO: does this alpha make sense???
-    colour = vec4(mix(colour.rgb, fogColour.rgb, fogColour.a), max(colour.a, fogColour.a));
 }
