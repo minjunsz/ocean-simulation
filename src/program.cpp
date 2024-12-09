@@ -341,29 +341,6 @@ namespace wave_tool
             ImGui::Separator();
         }
 
-        if (nullptr != m_terrain)
-        {
-            if (ImGui::TreeNode("TERRAIN"))
-            {
-                ImGui::Separator();
-                ImGui::Text("VISIBILITY:");
-                ImGui::SameLine();
-                if (ImGui::Button("TOGGLE##3"))
-                    m_terrain->m_isVisible = !m_terrain->m_isVisible;
-                ImGui::SameLine();
-                ImGui::Text("POLYGON MODE:");
-                ImGui::SameLine();
-                if (ImGui::Button("FULL##3"))
-                    m_terrain->m_polygonMode = PolygonMode::FILL;
-                ImGui::SameLine();
-                if (ImGui::Button("WIREFRAME##3"))
-                    m_terrain->m_polygonMode = PolygonMode::LINE;
-                ImGui::Separator();
-                ImGui::TreePop();
-            }
-            ImGui::Separator();
-        }
-
         if (nullptr != m_waterGrid)
         {
             if (ImGui::TreeNode("WATER-GRID"))
@@ -779,33 +756,6 @@ namespace wave_tool
         {
             m_waterGrid->shaderProgramID = m_renderEngine->getWaterGridProgram();
             m_renderEngine->assignBuffers(*m_waterGrid);
-        }
-
-        // TODO: in the future, allow users to load in different terrains? (it would be nice to get program to work dynamically with whatever terrain it comes across) - probably not since finding terrain that works with my loader is hell
-        //  terrain...
-        m_terrain = ObjectLoader::createTriMeshObject("../../assets/models/imports/everest.obj");
-        if (nullptr != m_terrain)
-        {
-            if (m_terrain->hasTexture)
-            {
-                m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/everest.png");
-                // fallback #1 (use default texture)
-                if (0 == m_terrain->textureID)
-                {
-                    m_terrain->textureID = m_renderEngine->load2DTexture("../../assets/textures/default.png");
-                    // fallback #2 (no terrain)
-                    if (0 == m_terrain->textureID)
-                        m_terrain = nullptr;
-                }
-            }
-            if (nullptr != m_terrain)
-            {
-                // m_terrain->generateNormals();
-                m_terrain->setScale(glm::vec3{100.0f, 100.0f, 100.0f});
-                m_terrain->shaderProgramID = m_renderEngine->getMainProgram();
-                m_meshObjects.push_back(m_terrain);
-                m_renderEngine->assignBuffers(*m_terrain);
-            }
         }
     }
 
