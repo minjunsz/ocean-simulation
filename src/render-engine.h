@@ -236,7 +236,6 @@ namespace wave_tool
         float heightmapSampleScale{0.02f};                                 // in range [0.0, inf)
         bool isAnimatingTimeOfDay = false;
         bool isAnimatingWaves = true;
-        float overcastStrength = 0.0f;             // in range [0.0, 1.0]
         float softEdgesDeltaDepthThreshold{0.05f}; // in range [0.0, 1.0]
         float sunHorizonDarkness = 0.25f;          // in range [0.0, 1.0]
         float sunShininess = 50.0f;                // in range [0.0, inf)

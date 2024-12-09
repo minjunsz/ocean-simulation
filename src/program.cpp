@@ -246,12 +246,6 @@ namespace wave_tool
             m_renderEngine->cloudProportion = glm::clamp(m_renderEngine->cloudProportion, 0.0f, 1.0f);
         }
 
-        if (ImGui::SliderFloat("OVERCAST STRENGTH", &m_renderEngine->overcastStrength, 0.0f, 1.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->overcastStrength = glm::clamp(m_renderEngine->overcastStrength, 0.0f, 1.0f);
-        }
-
         if (ImGui::SliderFloat("SUN-HORIZON DARKNESS", &m_renderEngine->sunHorizonDarkness, 0.0f, 1.0f))
         {
             // force-clamp (handle CTRL + LEFT_CLICK)
@@ -731,25 +725,8 @@ namespace wave_tool
                                                                      "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/DaylightBox_Front.bmp",
                                                                      "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-nebulae-2048/DaylightBox_Back.bmp"});
 
-            // fallback #1 (use debug skybox)
-            if (0 == m_skyboxClouds->textureID)
-            {
-                m_skyboxClouds->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
-                                                                         "../../assets/textures/skyboxes/debug/_nx.jpg",
-                                                                         "../../assets/textures/skyboxes/debug/_py.jpg",
-                                                                         "../../assets/textures/skyboxes/debug/_ny.jpg",
-                                                                         "../../assets/textures/skyboxes/debug/_pz.jpg",
-                                                                         "../../assets/textures/skyboxes/debug/_nz.jpg"});
-
-                // fallback #2 (no cloud skybox)
-                if (0 == m_skyboxClouds->textureID)
-                    m_skyboxClouds = nullptr;
-            }
-            if (nullptr != m_skyboxClouds)
-            {
-                m_skyboxClouds->shaderProgramID = m_renderEngine->getSkyboxCloudsProgram();
-                m_renderEngine->assignBuffers(*m_skyboxClouds);
-            }
+            m_skyboxClouds->shaderProgramID = m_renderEngine->getSkyboxCloudsProgram();
+            m_renderEngine->assignBuffers(*m_skyboxClouds);
         }
 
         m_waterGrid = std::make_shared<MeshObject>();

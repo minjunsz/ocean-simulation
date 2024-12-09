@@ -33,7 +33,6 @@
 
 // used as a grayscale intensity threshold acting as a way to control the proportion of clouds from the skybox textures get drawn
 uniform float oneMinusCloudProportion;
-uniform float overcastStrength;
 uniform samplerCube skyboxClouds;
 // the inverse light direction
 uniform vec3 sunPosition;
@@ -59,10 +58,6 @@ void main() {
     // only draw cloud (set alpha > 0.0) if it meets the proportion threshold
     // NOTE: (C_srgb - oneMinusCloudProportion) / (1.0f - oneMinusCloudProportion) =:= scaling operation to map all the threshold-meeting C_srgb intensities to range [0.0, 1.0]
     colour = vec4(cloudColour, C_srgb > oneMinusCloudProportion ? (C_srgb - oneMinusCloudProportion) / (1.0f - oneMinusCloudProportion) : 0.0f);
-
-    float a = clamp(sunPosition.y, 0.0f, 1.0f) * overcastStrength;
-
-    colour = mix(colour, grayscaleColour, 0.0f);
 
     // debug colours...
     // grayscale

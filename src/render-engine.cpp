@@ -405,7 +405,6 @@ namespace wave_tool
 
                 // set uniforms...
                 glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "oneMinusCloudProportion"), oneMinusCloudProportion);
-                glUniform1f(glGetUniformLocation(skyboxCloudsProgram, "overcastStrength"), overcastStrength);
                 // TODO: refactor into own function
                 //  bind texture...
                 glActiveTexture(GL_TEXTURE0 + skyboxClouds->textureID);
