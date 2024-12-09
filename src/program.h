@@ -72,7 +72,6 @@ namespace wave_tool
         std::shared_ptr<MeshObject> m_skyboxClouds = nullptr;
         std::shared_ptr<MeshObject> m_skyboxStars = nullptr;
         std::shared_ptr<MeshObject> m_skysphere = nullptr;
-        std::shared_ptr<MeshObject> m_terrain = nullptr;
         std::shared_ptr<MeshObject> m_waterGrid = nullptr;
         GLFWwindow *m_window = nullptr;
         std::shared_ptr<MeshObject> m_xyPlane = nullptr;
