@@ -1,0 +1,144 @@
+#version 410 core
+
+layout(triangles, equal_spacing, cw) in;
+
+in vec2 uv_out[];
+out vec3 normal;
+out vec3 normalVecInViewSpaceOnlyYaw;
+out vec3 viewVecRaw;
+out vec2 xyPositionNDCSpaceHeight0;
+out float jacobianDeterminant;
+
+uniform vec4 bottomLeftGridPointInWorld;
+uniform vec4 bottomRightGridPointInWorld;
+uniform vec4 topLeftGridPointInWorld;
+uniform vec4 topRightGridPointInWorld;
+
+uniform uint gerstnerWaveCount;
+const uint MAX_COUNT_OF_GERSTNER_WAVES = 4;
+uniform struct GerstnerWave {
+    float amplitude_A;
+    float frequency_w;
+    float phaseConstant_phi;
+    float steepness_Q_i;
+    vec2 xzDirection_D;
+} gerstnerWaves[MAX_COUNT_OF_GERSTNER_WAVES];
+
+uniform sampler2D heightmap;
+uniform vec2 heightmapResolution;
+uniform float heightmapDisplacementScale;
+uniform float heightmapSampleScale;
+uniform float waveAnimationTimeInSeconds;
+uniform float verticalBounceWaveDisplacement;
+uniform uint gridLength;
+
+uniform mat4 viewMatOnlyYaw;
+uniform mat4 viewProjection;
+uniform vec3 cameraPosition;
+
+vec3 computeGerstnerSurfacePosition(in vec2 xzGridPosition, in float timeInSeconds) {
+    vec3 gerstnerSurfacePosition = vec3(xzGridPosition.x, 0.0f, xzGridPosition.y);
+    for (uint i = 0; i < gerstnerWaveCount; ++i) {
+        // this contribution of this wave...
+        float xyzConstant_1 = gerstnerWaves[i].frequency_w * dot(gerstnerWaves[i].xzDirection_D, xzGridPosition) + gerstnerWaves[i].phaseConstant_phi * timeInSeconds;
+        float xzConstant_1 = gerstnerWaves[i].steepness_Q_i * cos(xyzConstant_1);
+        vec3 gerstnerWavePosition = gerstnerWaves[i].amplitude_A * vec3(gerstnerWaves[i].xzDirection_D.x * xzConstant_1, sin(xyzConstant_1), gerstnerWaves[i].xzDirection_D.y * xzConstant_1);
+        gerstnerSurfacePosition += gerstnerWavePosition;
+    }
+
+    return gerstnerSurfacePosition;
+}
+
+vec4 computeInterpolatedGridPosition(in vec2 uv) {
+    vec4 mix_u_1 = mix(bottomLeftGridPointInWorld, bottomRightGridPointInWorld, uv.s);
+    vec4 mix_u_2 = mix(topLeftGridPointInWorld, topRightGridPointInWorld, uv.s);
+    return mix(mix_u_1, mix_u_2, uv.t);
+}
+
+vec4 sampleHeightmap(in vec4 position) {
+    return texture(heightmap, heightmapSampleScale * vec2(position.x, -position.z));
+}
+
+float computeHeightmapDisplacement(in vec4 position) {
+    vec4 heightmapSample = texture(heightmap, heightmapSampleScale * vec2(position.x, -position.z));
+    float heightmap_intensity_0_to_1 = heightmapSample.r;
+    float heightmap_intensity_neg1_to_1 = 2.0f * (heightmap_intensity_0_to_1 - 0.5f);
+    return heightmapDisplacementScale * heightmap_intensity_neg1_to_1;
+}
+
+mat2 computeJacobian(in vec2 xzGridPosition, in float timeInSeconds) {
+    vec3 center = computeGerstnerSurfacePosition(xzGridPosition, timeInSeconds);
+
+    float delta = 0.01;
+    vec3 dx = computeGerstnerSurfacePosition(xzGridPosition + vec2(delta, 0.0), timeInSeconds);
+    vec3 dz = computeGerstnerSurfacePosition(xzGridPosition + vec2(0.0, delta), timeInSeconds);
+
+    float dXdx = (dx.x - center.x) / delta;
+    float dYdx = (dx.y - center.y) / delta;
+    float dXdz = (dz.x - center.x) / delta;
+    float dYdz = (dz.y - center.y) / delta;
+
+    return mat2(dXdx, dYdx, dXdz, dYdz);
+}
+
+void main() {
+    // Compute interpolated UV coordinates for the tessellated vertex
+    vec2 uv = gl_TessCoord.x * uv_out[0] + gl_TessCoord.y * uv_out[1] + gl_TessCoord.z * uv_out[2];
+
+    // Compute interpolated world-space position
+    vec4 position = computeInterpolatedGridPosition(uv);
+
+    // Apply Gerstner wave displacement
+    position = vec4(computeGerstnerSurfacePosition(position.xz, waveAnimationTimeInSeconds), 1.0f);
+
+    // Calculate Jacobian determinant
+    mat2 jacobian = computeJacobian(position.xz, waveAnimationTimeInSeconds);
+    jacobianDeterminant = jacobian[0][0] * jacobian[1][1] - jacobian[0][1] * jacobian[1][0];
+
+    // Sample and displace using heightmap
+    position.y += computeHeightmapDisplacement(position);
+
+    // Add vertical bounce displacement
+    position.y += verticalBounceWaveDisplacement;
+
+    // Calculate final clip-space position
+    gl_Position = viewProjection * position;
+
+    // Output other interpolated attributes
+    float du = 1.0f / (gridLength - 1);
+    float dv = 1.0f / (gridLength - 1);
+    vec4 positionClipSpaceHeight0 = viewProjection * vec4(position.x, 0.0f, position.z, 1.0f);
+    xyPositionNDCSpaceHeight0 = positionClipSpaceHeight0.xy / positionClipSpaceHeight0.w;
+    viewVecRaw = cameraPosition - position.xyz;
+
+    vec4 pos_minus_du = computeInterpolatedGridPosition(uv - vec2(du, 0.0f));
+    vec4 pos_plus_du = computeInterpolatedGridPosition(uv + vec2(du, 0.0f));
+    vec4 pos_minus_dv = computeInterpolatedGridPosition(uv - vec2(0.0f, dv));
+    vec4 pos_plus_dv = computeInterpolatedGridPosition(uv + vec2(0.0f, dv));
+
+    pos_minus_du = vec4(computeGerstnerSurfacePosition(pos_minus_du.xz, waveAnimationTimeInSeconds), 1.0f);
+    pos_plus_du = vec4(computeGerstnerSurfacePosition(pos_plus_du.xz, waveAnimationTimeInSeconds), 1.0f);
+    pos_minus_dv = vec4(computeGerstnerSurfacePosition(pos_minus_dv.xz, waveAnimationTimeInSeconds), 1.0f);
+    pos_plus_dv = vec4(computeGerstnerSurfacePosition(pos_plus_dv.xz, waveAnimationTimeInSeconds), 1.0f);
+
+    pos_minus_du.y += computeHeightmapDisplacement(pos_minus_du);
+    pos_plus_du.y += computeHeightmapDisplacement(pos_plus_du);
+    pos_minus_dv.y += computeHeightmapDisplacement(pos_minus_dv);
+    pos_plus_dv.y += computeHeightmapDisplacement(pos_plus_dv);
+
+    pos_minus_du.y += verticalBounceWaveDisplacement;
+    pos_plus_du.y += verticalBounceWaveDisplacement;
+    pos_minus_dv.y += verticalBounceWaveDisplacement;
+    pos_plus_dv.y += verticalBounceWaveDisplacement;
+
+    //NOTE: since the projector is currently always above the water and our waves have no y-overlaps, this original normal will always be pointing upwards (+y)
+    //TODO: probably check this assumption to be safe
+    //TODO: currently some of the normals appear black (0 vector or negative?) when debug rendered as the fragment colour, so fix this bug (could be from flipping or bad math)
+    normal = normalize(cross((pos_plus_du - pos_minus_du).xyz, (pos_plus_dv - pos_minus_dv).xyz));
+    // flip the normal when the camera is underwater...
+    //TODO: I think this is inaccurate when camera is close to water surface, so a fix would be to compute the "water position.y" where the camera is (from camera.xz) and then compare water position.y to cameraPosition.y to decide if flipping is needed
+    if (dot(normal, normalize(viewVecRaw)) < 0.0f) normal *= -1;
+
+    // output normal vector in view space of the camera with only yaw (thus, camera y-axis == world-space y-axis)
+    normalVecInViewSpaceOnlyYaw = normalize((viewMatOnlyYaw * vec4(normal, 0.0f)).xyz);
+}

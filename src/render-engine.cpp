@@ -62,7 +62,8 @@ namespace wave_tool
         skysphereProgram = ShaderTools::compileShaders("../../assets/shaders/skysphere.vert", "../../assets/shaders/skysphere.frag");
         trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../../assets/shaders/main.vert", "../../assets/shaders/main.frag");
-        waterGridProgram = ShaderTools::compileShaders("../../assets/shaders/water-grid.vert", "../../assets/shaders/water-grid.frag");
+        waterGridProgram = ShaderTools::compileShaders("../../assets/shaders/water-grid.vert", "../../assets/shaders/water-grid.frag",
+                                                       "../../assets/shaders/water-grid.tcs", "../../assets/shaders/water-grid.tes");
         worldSpaceDepthProgram = ShaderTools::compileShaders("../../assets/shaders/world-space-depth.vert", "../../assets/shaders/world-space-depth.frag");
 
         // Set OpenGL state
@@ -1122,7 +1123,9 @@ namespace wave_tool
                 // draw...
                 // POINT, LINE or FILL...
                 glPolygonMode(GL_FRONT_AND_BACK, waterGrid->m_polygonMode);
-                glDrawElements(waterGrid->m_primitiveMode, waterGrid->drawFaces.size(), GL_UNSIGNED_INT, (void *)0);
+                // glDrawElements(waterGrid->m_primitiveMode, waterGrid->drawFaces.size(), GL_UNSIGNED_INT, (void *)0);
+                glPatchParameteri(GL_PATCH_VERTICES, 3); // Set the number of vertices per patch (3 for triangles)
+                glDrawElements(GL_PATCHES, waterGrid->drawFaces.size(), GL_UNSIGNED_INT, (void *)0);
 
                 // unbind texture...
                 glBindTexture(GL_TEXTURE_CUBE_MAP, 0);

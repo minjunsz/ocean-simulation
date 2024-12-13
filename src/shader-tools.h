@@ -36,16 +36,21 @@
 #include <iostream>
 #include <fstream>
 
-namespace wave_tool {
+namespace wave_tool
+{
     // Class modified from code provided by Allan Rocha for CPSC 591
-    class ShaderTools {
-        public:
-            static GLuint compileShaders(char const* vertexFilename, char const* fragmentFilename);
-            static GLuint compileShaders(char const* vertexFilename, char const* geometryFilename, char const* fragmentFilename);
-        private:
-            static unsigned long getFileLength(std::ifstream &file);
-            static GLchar* loadshader(std::string filename);
-            static void unloadshader(GLchar **ShaderSource);
+    class ShaderTools
+    {
+    public:
+        static GLuint compileShaders(char const *vertexFilename, char const *fragmentFilename,
+                                     char const *tessControlFilename = nullptr, char const *tessEvalFilename = nullptr);
+
+    private:
+        static unsigned long getFileLength(std::ifstream &file);
+        static GLchar *loadshader(std::string filename);
+        static void unloadshader(GLchar **ShaderSource);
+        static void checkShaderCompilation(GLuint shader, char const *shaderName);
+        static void checkProgramLink(GLuint program);
     };
 }
 
