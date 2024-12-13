@@ -562,7 +562,7 @@ namespace wave_tool
         // bring the new window to the foreground (not strictly necessary but convenient)
         glfwMakeContextCurrent(m_window);
         // enable VSync
-        glfwSwapInterval(1);
+        glfwSwapInterval(0);
 
         // reference: https://www.khronos.org/opengl/wiki/OpenGL_Loading_Library#glad_.28Multi-Language_GL.2FGLES.2FEGL.2FGLX.2FWGL_Loader-Generator.29
         // glad uses GLFW loader to find appropriate OpenGL config (load OpenGL functions) for your system
