@@ -114,16 +114,8 @@ namespace wave_tool
         ImGui::NewFrame();
 
         ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f));
-        ImGui::SetNextWindowSizeConstraints(ImVec2(1024.0f, 64.0f), ImVec2(1024.0f, 512.0f));
-        // ImGui::SetWindowSize(ImVec2(1024.0f, 256.0f));
-        //  begin main window...
-        // NOTE: don't do this with my current setup, cause the early return will prevent all animations from updating (so effectively this is a cheap but unwanted pause button!)
-        // TODO: move animation updates into a better location, add a proper pause button and then add this back in
-        // if (!ImGui::Begin("SETTINGS")) {
-        //     // early out (optimization) if the window is collapsed
-        //     ImGui::End();
-        //     return;
-        // }
+        ImGui::SetNextWindowSizeConstraints(ImVec2(1024.0f, 64.0f), ImVec2(1024.0f, 336.0f));
+
         ImGui::Begin("SETTINGS");
 
         ImGui::Separator();
@@ -170,199 +162,44 @@ namespace wave_tool
 
         ImGui::Separator();
 
-        if (nullptr != m_yzPlane)
-        {
-            if (ImGui::Button("TOGGLE YZ-PLANE / +X-AXIS (RED)"))
-                m_yzPlane->m_isVisible = !m_yzPlane->m_isVisible;
-            ImGui::SameLine();
-        }
-        if (nullptr != m_xzPlane)
-        {
-            if (ImGui::Button("TOGGLE XZ-PLANE / +Y-AXIS (GREEN)"))
-                m_xzPlane->m_isVisible = !m_xzPlane->m_isVisible;
-            ImGui::SameLine();
-        }
-        if (nullptr != m_xyPlane)
-        {
-            if (ImGui::Button("TOGGLE XY-PLANE / +Z-AXIS (BLUE)"))
-                m_xyPlane->m_isVisible = !m_xyPlane->m_isVisible;
-            ImGui::SameLine();
-        }
-        if (nullptr != m_yzPlane || nullptr != m_xzPlane || nullptr != m_xyPlane)
-        {
-            ImGui::Text("   note: grid spacing is 1 unit");
-            ImGui::Separator();
-        }
-
-        ImGui::Separator();
-
-        ImGui::Text("RENDER MODE:");
-        ImGui::SameLine();
-        if (ImGui::Button("DEFAULT##0"))
-            m_renderEngine->renderMode = RenderMode::DEFAULT;
-        ImGui::SameLine();
-        if (ImGui::Button("LOCAL REFLECTIONS##0"))
-            m_renderEngine->renderMode = RenderMode::LOCAL_REFLECTIONS;
-        ImGui::SameLine();
-        if (ImGui::Button("LOCAL REFRACTIONS##0"))
-            m_renderEngine->renderMode = RenderMode::LOCAL_REFRACTIONS;
-
-        ImGui::Separator();
-
-        if (ImGui::SliderFloat("TIME OF DAY (HOURS)", &m_renderEngine->timeOfDayInHours, 0.0f, 24.0f))
+        const float MIN_TIME = 5.0f;
+        const float MAX_TIME = 17.0f;
+        if (ImGui::SliderFloat("TIME OF DAY (HOURS)", &m_renderEngine->timeOfDayInHours, MIN_TIME, MAX_TIME))
         {
             // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->timeOfDayInHours = glm::clamp(m_renderEngine->timeOfDayInHours, 0.0f, 24.0f);
+            m_renderEngine->timeOfDayInHours = glm::clamp(m_renderEngine->timeOfDayInHours, MIN_TIME, MAX_TIME);
         }
+
+        ImGui::SameLine();
 
         if (ImGui::Button("TOGGLE ANIMATION##0"))
         {
             m_renderEngine->isAnimatingTimeOfDay = !m_renderEngine->isAnimatingTimeOfDay;
         }
-        ImGui::SameLine();
-
-        ImGui::PushItemWidth(300.0f);
-        if (ImGui::SliderFloat("ANIMATION SPEED (REAL-TIME SECONDS PER SIMULATED HOUR)", &m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour, 0.0f, 60.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            if (m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour < 0.0f)
-                m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour = 0.0f;
-        }
-        ImGui::PopItemWidth();
-
-        // TODO: refactor this into its own function somewhere else...
-        // TODO: check if this ImGui framerate is applicable here (or is it an average of several frames???)
         if (m_renderEngine->isAnimatingTimeOfDay && m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour > 0.0f)
         {
             float const deltaTimeInSeconds = 1.0f / ImGui::GetIO().Framerate;
             float const deltaTimeOfDayInHours = (1.0f / m_renderEngine->animationSpeedTimeOfDayInSecondsPerHour) * deltaTimeInSeconds;
             m_renderEngine->timeOfDayInHours += deltaTimeOfDayInHours;
-            m_renderEngine->timeOfDayInHours = glm::mod(m_renderEngine->timeOfDayInHours, 24.0f);
+            m_renderEngine->timeOfDayInHours = MIN_TIME + glm::mod(m_renderEngine->timeOfDayInHours - MIN_TIME, MAX_TIME - MIN_TIME);
         }
 
-        if (ImGui::SliderFloat("CLOUD PROPORTION", &m_renderEngine->cloudProportion, 0.0f, 1.0f))
+        if (ImGui::SliderFloat("CLOUD PROPORTION", &m_renderEngine->cloudProportion, 0.0f, 0.3f))
         {
             // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->cloudProportion = glm::clamp(m_renderEngine->cloudProportion, 0.0f, 1.0f);
-        }
-
-        if (ImGui::SliderFloat("SUN-HORIZON DARKNESS", &m_renderEngine->sunHorizonDarkness, 0.0f, 1.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->sunHorizonDarkness = glm::clamp(m_renderEngine->sunHorizonDarkness, 0.0f, 1.0f);
-        }
-
-        if (ImGui::SliderFloat("SUN SHININESS", &m_renderEngine->sunShininess, 0.0f, 200.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            if (m_renderEngine->sunShininess < 0.0f)
-                m_renderEngine->sunShininess = 0.0f;
-        }
-
-        if (ImGui::SliderFloat("SUN STRENGTH", &m_renderEngine->sunStrength, 0.0f, 1.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->sunStrength = glm::clamp(m_renderEngine->sunStrength, 0.0f, 1.0f);
+            m_renderEngine->cloudProportion = glm::clamp(m_renderEngine->cloudProportion, 0.0f, 0.3f);
         }
 
         ImGui::Separator();
 
-        if (nullptr != m_skyboxStars || nullptr != m_skysphere || nullptr != m_skyboxClouds)
-        {
-            if (ImGui::TreeNode("SKYBOX"))
-            {
-                ImGui::Separator();
-                if (nullptr != m_skyboxStars)
-                {
-                    if (ImGui::TreeNode("SPACE/STAR LAYER"))
-                    {
-                        ImGui::Separator();
-                        ImGui::Text("VISIBILITY:");
-                        ImGui::SameLine();
-                        if (ImGui::Button("TOGGLE##0"))
-                            m_skyboxStars->m_isVisible = !m_skyboxStars->m_isVisible;
-                        ImGui::SameLine();
-                        ImGui::Text("POLYGON MODE:");
-                        ImGui::SameLine();
-                        if (ImGui::Button("FULL##0"))
-                            m_skyboxStars->m_polygonMode = PolygonMode::FILL;
-                        ImGui::SameLine();
-                        if (ImGui::Button("WIREFRAME##0"))
-                            m_skyboxStars->m_polygonMode = PolygonMode::LINE;
-                        ImGui::Separator();
-                        ImGui::TreePop();
-                    }
-                }
-                if (nullptr != m_skysphere)
-                {
-                    if (ImGui::TreeNode("ATMOSPHERE/SUN LAYER"))
-                    {
-                        ImGui::Separator();
-                        ImGui::Text("VISIBILITY:");
-                        ImGui::SameLine();
-                        if (ImGui::Button("TOGGLE##1"))
-                            m_skysphere->m_isVisible = !m_skysphere->m_isVisible;
-                        ImGui::SameLine();
-                        ImGui::Text("POLYGON MODE:");
-                        ImGui::SameLine();
-                        if (ImGui::Button("FULL##1"))
-                            m_skysphere->m_polygonMode = PolygonMode::FILL;
-                        ImGui::SameLine();
-                        if (ImGui::Button("WIREFRAME##1"))
-                            m_skysphere->m_polygonMode = PolygonMode::LINE;
-                        ImGui::Separator();
-                        ImGui::TreePop();
-                    }
-                }
-                if (nullptr != m_skyboxClouds)
-                {
-                    if (ImGui::TreeNode("CLOUD LAYER"))
-                    {
-                        ImGui::Separator();
-                        ImGui::Text("VISIBILITY:");
-                        ImGui::SameLine();
-                        if (ImGui::Button("TOGGLE##2"))
-                            m_skyboxClouds->m_isVisible = !m_skyboxClouds->m_isVisible;
-                        ImGui::SameLine();
-                        ImGui::Text("POLYGON MODE:");
-                        ImGui::SameLine();
-                        if (ImGui::Button("FULL##2"))
-                            m_skyboxClouds->m_polygonMode = PolygonMode::FILL;
-                        ImGui::SameLine();
-                        if (ImGui::Button("WIREFRAME##2"))
-                            m_skyboxClouds->m_polygonMode = PolygonMode::LINE;
-                        ImGui::Separator();
-                        ImGui::TreePop();
-                    }
-                }
-                ImGui::Separator();
-                ImGui::TreePop();
-            }
-            ImGui::Separator();
-        }
-
-        if (nullptr != m_waterGrid)
-        {
-            if (ImGui::TreeNode("WATER-GRID"))
-            {
-                ImGui::Separator();
-                ImGui::Text("VISIBILITY:");
-                ImGui::SameLine();
-                if (ImGui::Button("TOGGLE##4"))
-                    m_waterGrid->m_isVisible = !m_waterGrid->m_isVisible;
-                ImGui::SameLine();
-                ImGui::Text("POLYGON MODE:");
-                ImGui::SameLine();
-                if (ImGui::Button("FULL##4"))
-                    m_waterGrid->m_polygonMode = PolygonMode::FILL;
-                ImGui::SameLine();
-                if (ImGui::Button("WIREFRAME##4"))
-                    m_waterGrid->m_polygonMode = PolygonMode::LINE;
-                ImGui::Separator();
-                ImGui::TreePop();
-            }
-            ImGui::Separator();
-        }
+        ImGui::Text("WATER-GRID POLYGON MODE:");
+        ImGui::SameLine();
+        if (ImGui::Button("FULL##4"))
+            m_waterGrid->m_polygonMode = PolygonMode::FILL;
+        ImGui::SameLine();
+        if (ImGui::Button("WIREFRAME##4"))
+            m_waterGrid->m_polygonMode = PolygonMode::LINE;
+        ImGui::Separator();
 
         if (!m_renderEngine->gerstnerWaves.empty())
         {
@@ -492,24 +329,23 @@ namespace wave_tool
             }
         }
 
-        if (ImGui::SliderFloat("TINT DEPTH THRESHOLD", &m_renderEngine->tintDeltaDepthThreshold, 0.0f, 1.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->tintDeltaDepthThreshold = glm::clamp(m_renderEngine->tintDeltaDepthThreshold, 0.0f, 1.0f);
-        }
+        // if (ImGui::SliderFloat("TINT DEPTH THRESHOLD", &m_renderEngine->tintDeltaDepthThreshold, 0.0f, 1.0f))
+        // {
+        //     // force-clamp (handle CTRL + LEFT_CLICK)
+        //     m_renderEngine->tintDeltaDepthThreshold = glm::clamp(m_renderEngine->tintDeltaDepthThreshold, 0.0f, 1.0f);
+        // }
 
-        if (ImGui::SliderFloat("WATER CLARITY", &m_renderEngine->waterClarity, 0.0f, 1.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->waterClarity = glm::clamp(m_renderEngine->waterClarity, 0.0f, 1.0f);
-        }
+        // if (ImGui::SliderFloat("WATER CLARITY", &m_renderEngine->waterClarity, 0.0f, 1.0f))
+        // {
+        //     // force-clamp (handle CTRL + LEFT_CLICK)
+        //     m_renderEngine->waterClarity = glm::clamp(m_renderEngine->waterClarity, 0.0f, 1.0f);
+        // }
 
-        if (ImGui::SliderFloat("SOFT-EDGES DEPTH THRESHOLD", &m_renderEngine->softEdgesDeltaDepthThreshold, 0.0f, 1.0f))
-        {
-            // force-clamp (handle CTRL + LEFT_CLICK)
-            m_renderEngine->softEdgesDeltaDepthThreshold = glm::clamp(m_renderEngine->softEdgesDeltaDepthThreshold, 0.0f, 1.0f);
-        }
-
+        // if (ImGui::SliderFloat("SOFT-EDGES DEPTH THRESHOLD", &m_renderEngine->softEdgesDeltaDepthThreshold, 0.0f, 1.0f))
+        // {
+        //     // force-clamp (handle CTRL + LEFT_CLICK)
+        //     m_renderEngine->softEdgesDeltaDepthThreshold = glm::clamp(m_renderEngine->softEdgesDeltaDepthThreshold, 0.0f, 1.0f);
+        // }
         ImGui::Separator();
 
         ImGui::End();
@@ -551,95 +387,6 @@ namespace wave_tool
         int const deltaX{1};
         int const deltaY{1};
         int const deltaZ{1};
-
-        // YZ-PLANE / +X-AXIS (RED)...
-        m_yzPlane = std::make_shared<MeshObject>();
-        m_yzPlane->setTag(Tag::DEBUG);
-
-        for (int y = -maxY; y <= maxY; y += deltaY)
-        {
-            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, y, -maxZ));
-            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, y, maxZ));
-        }
-        for (int z = -maxZ; z <= maxZ; z += deltaZ)
-        {
-            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, -maxY, z));
-            m_yzPlane->drawVerts.push_back(glm::vec3(0.0f, maxY, z));
-        }
-        m_yzPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 0.0f});
-        m_yzPlane->drawVerts.push_back(glm::vec3{2.0f * maxX, 0.0f, 0.0f});
-
-        for (unsigned int i = 0; i < m_yzPlane->drawVerts.size(); ++i)
-        {
-            m_yzPlane->drawFaces.push_back(i);
-            m_yzPlane->colours.push_back(glm::vec3(1.0f, 0.0f, 0.0f));
-        }
-
-        m_yzPlane->m_primitiveMode = PrimitiveMode::LINES;
-        m_yzPlane->m_isVisible = false;
-        m_yzPlane->shaderProgramID = m_renderEngine->getTrivialProgram();
-        m_meshObjects.push_back(m_yzPlane);
-        m_renderEngine->assignBuffers(*m_yzPlane);
-
-        // XZ-PLANE / +Y-AXIS (GREEN)...
-
-        m_xzPlane = std::make_shared<MeshObject>();
-        m_xzPlane->setTag(Tag::DEBUG);
-
-        for (int x = -maxX; x <= maxX; x += deltaX)
-        {
-            m_xzPlane->drawVerts.push_back(glm::vec3(x, 0.0f, -maxZ));
-            m_xzPlane->drawVerts.push_back(glm::vec3(x, 0.0f, maxZ));
-        }
-        for (int z = -maxZ; z <= maxZ; z += deltaZ)
-        {
-            m_xzPlane->drawVerts.push_back(glm::vec3(-maxX, 0.0f, z));
-            m_xzPlane->drawVerts.push_back(glm::vec3(maxX, 0.0f, z));
-        }
-        m_xzPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 0.0f});
-        m_xzPlane->drawVerts.push_back(glm::vec3{0.0f, 2.0f * maxY, 0.0f});
-
-        for (unsigned int i = 0; i < m_xzPlane->drawVerts.size(); ++i)
-        {
-            m_xzPlane->drawFaces.push_back(i);
-            m_xzPlane->colours.push_back(glm::vec3(0.0f, 1.0f, 0.0f));
-        }
-
-        m_xzPlane->m_primitiveMode = PrimitiveMode::LINES;
-        m_xzPlane->m_isVisible = false;
-        m_xzPlane->shaderProgramID = m_renderEngine->getTrivialProgram();
-        m_meshObjects.push_back(m_xzPlane);
-        m_renderEngine->assignBuffers(*m_xzPlane);
-
-        // XY-PLANE / +Z-AXIS (BLUE)
-
-        m_xyPlane = std::make_shared<MeshObject>();
-        m_xyPlane->setTag(Tag::DEBUG);
-
-        for (int x = -maxX; x <= maxX; x += deltaX)
-        {
-            m_xyPlane->drawVerts.push_back(glm::vec3(x, -maxY, 0.0f));
-            m_xyPlane->drawVerts.push_back(glm::vec3(x, maxY, 0.0f));
-        }
-        for (int y = -maxY; y <= maxY; y += deltaY)
-        {
-            m_xyPlane->drawVerts.push_back(glm::vec3(-maxX, y, 0.0f));
-            m_xyPlane->drawVerts.push_back(glm::vec3(maxX, y, 0.0f));
-        }
-        m_xyPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 0.0f});
-        m_xyPlane->drawVerts.push_back(glm::vec3{0.0f, 0.0f, 2.0f * maxZ});
-
-        for (unsigned int i = 0; i < m_xyPlane->drawVerts.size(); ++i)
-        {
-            m_xyPlane->drawFaces.push_back(i);
-            m_xyPlane->colours.push_back(glm::vec3(0.0f, 0.0f, 1.0f));
-        }
-
-        m_xyPlane->m_primitiveMode = PrimitiveMode::LINES;
-        m_xyPlane->m_isVisible = false;
-        m_xyPlane->shaderProgramID = m_renderEngine->getTrivialProgram();
-        m_meshObjects.push_back(m_xyPlane);
-        m_renderEngine->assignBuffers(*m_xyPlane);
 
         // TODO: is it possible to mirror the skybox textures on loading them in (since we are inside the cube), but keeping the proper orientation???
         //  hard-coded skyboxes...

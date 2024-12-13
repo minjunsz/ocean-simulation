@@ -231,7 +231,7 @@ namespace wave_tool
         // TODO: refactor these UI params out into a struct
         float animationSpeedTimeOfDayInSecondsPerHour = 1.0f;              // in range [0.0, inf)
         float animationSpeedVerticalBounceWavePhasePeriodInSeconds = 3.0f; // in range [0.0, inf)
-        float cloudProportion = 0.6f;                                      // in range [0.0, 1.0]
+        float cloudProportion = 0.3f;                                      // in range [0.0, 1.0]
         float heightmapDisplacementScale{1.0f};                            // in range [0.0, inf)
         float heightmapSampleScale{0.02f};                                 // in range [0.0, inf)
         bool isAnimatingTimeOfDay = false;

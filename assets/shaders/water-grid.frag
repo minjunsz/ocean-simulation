@@ -132,8 +132,7 @@ void main() {
     // finally, we can compute the local reflection and refraction colours (where an alpha of 0.0 symbolically represents no local reflection (or local refraction, respectively) for this fragment)
     vec4 localReflectionColour = texture(localReflectionsTexture2D, uvLocalReflections);
     vec4 localRefractionColour = texture(localRefractionsTexture2D, uvLocalRefractions);
-
-    //TODO: figure out a more realistic way in determining the tint colour (e.g. factor in the sky colour?), or have them in UI?
+    
     const vec3 DEEP_TINT_COLOUR_AT_NOON = vec3(0.0f, 0.341f, 0.482f);
     const vec3 SHALLOW_TINT_COLOUR_AT_NOON = vec3(0.3f, 0.941f, 0.903f);
     float tintInterpolationFactor = 0.0f == tintDeltaDepthThreshold ? 0.0f : hack_skybox_in_back * (1.0f - clamp(deltaDepthClamped / tintDeltaDepthThreshold, 0.0f, 1.0f));

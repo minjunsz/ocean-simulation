@@ -74,9 +74,6 @@ namespace wave_tool
         std::shared_ptr<MeshObject> m_skysphere = nullptr;
         std::shared_ptr<MeshObject> m_waterGrid = nullptr;
         GLFWwindow *m_window = nullptr;
-        std::shared_ptr<MeshObject> m_xyPlane = nullptr;
-        std::shared_ptr<MeshObject> m_xzPlane = nullptr;
-        std::shared_ptr<MeshObject> m_yzPlane = nullptr;
 
         // constructs Dear ImGui UI components
         void buildUI();

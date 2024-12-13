@@ -623,52 +623,7 @@ namespace wave_tool
         glDisable(GL_CLIP_DISTANCE0);
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        ///////////////////////////////////////////////////
-        /*
-                ///////////////////////////////////////////////////
-                // RENDER WORLD-SPACE DEPTH TEXTURE (of all generic objects, other than water-grid)
-                glBindFramebuffer(GL_FRAMEBUFFER, m_worldSpaceDepthFBO);
 
-                glDisable(GL_BLEND);
-
-                // since the skybox is at infinity, we can just render it with the clear colour
-                // alpha of 0.0 is used to indicate the skybox fragments (max depth of 1.0)
-                glClearColor(1.0f, 1.0f, 1.0f, 0.0f);
-                glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-                // enable shader program...
-                glUseProgram(worldSpaceDepthProgram);
-
-                for (std::shared_ptr<MeshObject const> o : objects) {
-                    // don't render invisible objects or non-generics...
-                    if (!o->m_isVisible || Tag::GENERIC != o->getTag()) continue;
-
-                    glm::mat4 const modelViewMat{view * o->getModel()};
-                    glm::mat4 const mvpMat{projection * modelViewMat};
-
-                    // bind geometry data...
-                    glBindVertexArray(o->vao);
-
-                    // set uniforms...
-                    glUniformMatrix4fv(glGetUniformLocation(worldSpaceDepthProgram, "modelViewMat"), 1, GL_FALSE, glm::value_ptr(modelViewMat));
-                    glUniformMatrix4fv(glGetUniformLocation(worldSpaceDepthProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(mvpMat));
-                    glUniform1f(glGetUniformLocation(worldSpaceDepthProgram, "zFar"), Z_FAR);
-
-                    // POINT, LINE or FILL...
-                    glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
-                    glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void*)0);
-
-                    // unbind
-                    glBindVertexArray(0);
-                }
-
-                // disable
-                glUseProgram(0);
-                // reset
-                glEnable(GL_BLEND);
-                glBindFramebuffer(GL_FRAMEBUFFER, 0);
-                ///////////////////////////////////////////////////
-        */
         ///////////////////////////////////////////////////
         // RENDER DEPTH TEXTURE (of all generic objects, other than water-grid)
         glBindFramebuffer(GL_FRAMEBUFFER, m_depthFBO);
@@ -1176,43 +1131,6 @@ namespace wave_tool
                 glBindVertexArray(0); // unbind VAO
                 glUseProgram(0);      // unbind shader program
             }
-        }
-        ///////////////////////////////////////////////////
-
-        ///////////////////////////////////////////////////
-        // SPECIAL DEBUG RENDER MODES
-        // TODO: optimize the layout so that we don't render most of the stuff above if want to render one of these debug modes...
-
-        if (0 != m_emptyVAO && RenderMode::DEFAULT != renderMode)
-        {
-            glDisable(GL_BLEND);
-            glDepthMask(GL_FALSE);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-            // enable screen-space-quad shader program
-            glUseProgram(screenSpaceQuadProgram);
-            // bind geometry data...
-            glBindVertexArray(m_emptyVAO);
-
-            // set uniforms...
-            glUniform1i(glGetUniformLocation(screenSpaceQuadProgram, "isTextured"), GL_TRUE);
-            glUniform4fv(glGetUniformLocation(screenSpaceQuadProgram, "solidColour"), 1, glm::value_ptr(glm::vec4{1.0f, 1.0f, 1.0f, 1.0f})); // unused colour
-            if (RenderMode::LOCAL_REFLECTIONS == renderMode)
-                Texture::bind2DTexture(screenSpaceQuadProgram, m_localReflectionsTexture2D, "textureData");
-            else if (RenderMode::LOCAL_REFRACTIONS == renderMode)
-                Texture::bind2DTexture(screenSpaceQuadProgram, m_localRefractionsTexture2D, "textureData");
-
-            // POINT, LINE or FILL...
-            glPolygonMode(GL_FRONT_AND_BACK, PolygonMode::FILL);
-            glDrawArrays(PrimitiveMode::TRIANGLE_STRIP, 0, 4);
-
-            Texture::unbind2DTexture();
-            // unbind
-            glBindVertexArray(0);
-
-            // reset
-            glDepthMask(GL_TRUE);
-            glEnable(GL_BLEND);
         }
         ///////////////////////////////////////////////////
     }
