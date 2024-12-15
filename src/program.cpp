@@ -162,7 +162,7 @@ namespace wave_tool
 
         ImGui::Separator();
 
-        const float MIN_TIME = 5.0f;
+        const float MIN_TIME = 7.0f;
         const float MAX_TIME = 17.0f;
         if (ImGui::SliderFloat("TIME OF DAY (HOURS)", &m_renderEngine->timeOfDayInHours, MIN_TIME, MAX_TIME))
         {
@@ -402,20 +402,6 @@ namespace wave_tool
                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/front.png",
                                                                     "../../assets/textures/skyboxes/wwwtyro-space-3d/2drp4i9sx0lc-stars-2048/back.png"});
 
-            // fallback #1 (use debug skybox)
-            if (0 == m_skyboxStars->textureID)
-            {
-                m_skyboxStars->textureID = m_renderEngine->loadCubemap({"../../assets/textures/skyboxes/debug/_px.jpg",
-                                                                        "../../assets/textures/skyboxes/debug/_nx.jpg",
-                                                                        "../../assets/textures/skyboxes/debug/_py.jpg",
-                                                                        "../../assets/textures/skyboxes/debug/_ny.jpg",
-                                                                        "../../assets/textures/skyboxes/debug/_pz.jpg",
-                                                                        "../../assets/textures/skyboxes/debug/_nz.jpg"});
-
-                // fallback #2 (no star skybox)
-                if (0 == m_skyboxStars->textureID)
-                    m_skyboxStars = nullptr;
-            }
             if (nullptr != m_skyboxStars)
             {
                 m_skyboxStars->shaderProgramID = m_renderEngine->getSkyboxStarsProgram();
