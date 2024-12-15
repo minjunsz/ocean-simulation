@@ -60,11 +60,9 @@ namespace wave_tool
         skyboxStarsProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-stars.vert", "../../assets/shaders/skybox-stars.frag");
         skyboxTrivialProgram = ShaderTools::compileShaders("../../assets/shaders/skybox-trivial.vert", "../../assets/shaders/skybox-trivial.frag");
         skysphereProgram = ShaderTools::compileShaders("../../assets/shaders/skysphere.vert", "../../assets/shaders/skysphere.frag");
-        trivialProgram = ShaderTools::compileShaders("../../assets/shaders/trivial.vert", "../../assets/shaders/trivial.frag");
         mainProgram = ShaderTools::compileShaders("../../assets/shaders/main.vert", "../../assets/shaders/main.frag");
         waterGridProgram = ShaderTools::compileShaders("../../assets/shaders/water-grid.vert", "../../assets/shaders/water-grid.frag",
                                                        "../../assets/shaders/water-grid.tcs", "../../assets/shaders/water-grid.tes");
-        worldSpaceDepthProgram = ShaderTools::compileShaders("../../assets/shaders/world-space-depth.vert", "../../assets/shaders/world-space-depth.frag");
 
         // Set OpenGL state
         glEnable(GL_DEPTH_TEST);
@@ -203,36 +201,6 @@ namespace wave_tool
         ///////////////////////////////////////////////////
 
         ///////////////////////////////////////////////////
-        // WORLD-SPACE DEPTH TEXTURE (2D)...
-        glGenTextures(1, &m_worldSpaceDepthTexture2D);
-        glBindTexture(GL_TEXTURE_2D, m_worldSpaceDepthTexture2D);
-        // set options on currently bound texture object...
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // generate empty texture (2D)...
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-        // unbind
-        glBindTexture(GL_TEXTURE_2D, 0);
-
-        // WORLD-SPACE DEPTH FBO...
-        glGenFramebuffers(1, &m_worldSpaceDepthFBO);
-        glBindFramebuffer(GL_FRAMEBUFFER, m_worldSpaceDepthFBO);
-        // attach colour buffer to FBO
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_worldSpaceDepthTexture2D, 0);
-        // attach depth/stencil buffer to FBO
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, m_depth24Stencil8RBO);
-        // set fragment shader (location = 0) output
-        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-        // check FBO setup status...
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-            std::cout << "ERROR: render-engine.cpp - world-space depth FBO setup failed!" << std::endl;
-        // unbind / reset to default screen framebuffer
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        ///////////////////////////////////////////////////
-
-        ///////////////////////////////////////////////////
         // DEPTH FBO...
         glGenFramebuffers(1, &m_depthFBO);
         glBindFramebuffer(GL_FRAMEBUFFER, m_depthFBO);
@@ -258,8 +226,6 @@ namespace wave_tool
         glDeleteFramebuffers(1, &m_localReflectionsFBO);
         glDeleteTextures(1, &m_localRefractionsTexture2D);
         glDeleteFramebuffers(1, &m_localRefractionsFBO);
-        glDeleteTextures(1, &m_worldSpaceDepthTexture2D);
-        glDeleteFramebuffers(1, &m_worldSpaceDepthFBO);
         glDeleteFramebuffers(1, &m_depthFBO);
 
         glDeleteTextures(1, &m_skyboxCubemap);
@@ -273,9 +239,7 @@ namespace wave_tool
         glDeleteProgram(skyboxStarsProgram);
         glDeleteProgram(skyboxTrivialProgram);
         glDeleteProgram(skysphereProgram);
-        glDeleteProgram(trivialProgram);
         glDeleteProgram(waterGridProgram);
-        glDeleteProgram(worldSpaceDepthProgram);
     }
 
     std::shared_ptr<Camera> RenderEngine::getCamera() const
@@ -746,25 +710,6 @@ namespace wave_tool
                 glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void *)0);
 
                 Texture::unbind2DTexture();
-                // unbind
-                glBindVertexArray(0);
-            }
-            else if (o->shaderProgramID == trivialProgram)
-            {
-                glm::mat4 const mvp{viewProjection * o->getModel()};
-
-                // enable shader program...
-                glUseProgram(trivialProgram);
-                // bind geometry data...
-                glBindVertexArray(o->vao);
-
-                // set uniforms...
-                glUniformMatrix4fv(glGetUniformLocation(trivialProgram, "mvp"), 1, GL_FALSE, glm::value_ptr(mvp));
-
-                // POINT, LINE or FILL...
-                glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
-                glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void *)0);
-
                 // unbind
                 glBindVertexArray(0);
             }
