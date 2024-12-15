@@ -659,62 +659,12 @@ namespace wave_tool
             glPolygonMode(GL_FRONT_AND_BACK, PolygonMode::FILL);
             glDrawElements(skyboxStars->m_primitiveMode, skyboxStars->drawFaces.size(), GL_UNSIGNED_INT, (void *)0);
 
-            // TODO: refactor into own function
             //  unbind texture...
             glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
             // unbind
             glBindVertexArray(0);
             // re-enable depth writing for the rest of the scene
             glDepthMask(GL_TRUE);
-        }
-
-        // render other objects...
-        // TODO: optimize by batch-drawing objects that use the same shader program, as well as removing redundant uniform setting
-        // TODO: design some sort of wrapper around shader programs that can dynamically set all uniforms properly
-        for (std::shared_ptr<MeshObject const> o : objects)
-        {
-            assert(0 != o->shaderProgramID);
-
-            // don't render invisible objects...
-            if (!o->m_isVisible)
-                continue;
-
-            if (o->shaderProgramID == mainProgram)
-            {
-                glm::mat4 const modelMat{o->getModel()};
-                glm::mat4 const modelViewMat{view * modelMat};
-                glm::mat4 const mvpMat{projection * modelViewMat};
-
-                // enable shader program...
-                glUseProgram(mainProgram);
-                // bind geometry data...
-                glBindVertexArray(o->vao);
-
-                // set uniforms...
-                // pass a symbolic clip plane singularity to ensure this manual clipping test succeeds for all vertices - avoids driver bugs that ignore enable/disable state of clip distances
-                glUniform4fv(glGetUniformLocation(mainProgram, "clipPlane0"), 1, glm::value_ptr(SYMBOLIC_CLIP_PLANE_SINGULARITY));
-                glUniform4fv(glGetUniformLocation(mainProgram, "fogColourFarAtCurrentTime"), 1, glm::value_ptr(fogColourFarAtCurrentTime));
-                glUniform1i(glGetUniformLocation(mainProgram, "forceFlipNormals"), GL_FALSE);
-                glUniform1i(glGetUniformLocation(mainProgram, "hasNormals"), !o->normals.empty());
-                // TODO: handle this better
-                glUniform1i(glGetUniformLocation(mainProgram, "isTextured"), o->hasTexture);
-                glUniform3fv(glGetUniformLocation(mainProgram, "lightVec"), 1, glm::value_ptr(lightVec));
-                Texture::bind2DTexture(mainProgram, o->textureID, "textureData");
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelMat"), 1, GL_FALSE, glm::value_ptr(modelMat));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "modelViewMat"), 1, GL_FALSE, glm::value_ptr(modelViewMat));
-                glUniformMatrix4fv(glGetUniformLocation(mainProgram, "mvpMat"), 1, GL_FALSE, glm::value_ptr(mvpMat));
-                glUniform1f(glGetUniformLocation(mainProgram, "zFar"), Z_FAR);
-
-                // POINT, LINE or FILL...
-                glPolygonMode(GL_FRONT_AND_BACK, o->m_polygonMode);
-                glDrawElements(o->m_primitiveMode, o->drawFaces.size(), GL_UNSIGNED_INT, (void *)0);
-
-                Texture::unbind2DTexture();
-                // unbind
-                glBindVertexArray(0);
-            }
-            else
-                assert(false);
         }
 
         // NOTE: the order of drawing matters for alpha-blending
@@ -997,11 +947,6 @@ namespace wave_tool
                 glBindVertexArray(waterGrid->vao);
 
                 // set uniforms...
-                // TODO: should get uniform locations ONCE and store them (and error handle)
-
-                // TODO: right now this just matches a constant in program.cpp, but will be attached to MeshObject in the future
-                // TODO: make this a UI setting (and probably should store this with the mesh itself since drawFaces will be closely related)
-                // TODO: might even split this into a width/height (or hres/vres) in the future for non-square grids
                 // NOTE: this should be >= 2
                 GLuint const GRID_LENGTH = 513;
 
@@ -1043,7 +988,6 @@ namespace wave_tool
                 Texture::bind2DTexture(waterGridProgram, m_localReflectionsTexture2D, "localReflectionsTexture2D");
                 Texture::bind2DTexture(waterGridProgram, m_localRefractionsTexture2D, "localRefractionsTexture2D");
 
-                // TODO: refactor into own function
                 //  bind texture...
                 glActiveTexture(GL_TEXTURE0 + m_skyboxCubemap);
                 glBindTexture(GL_TEXTURE_CUBE_MAP, m_skyboxCubemap);
@@ -1064,6 +1008,13 @@ namespace wave_tool
                 glUniform1f(glGetUniformLocation(waterGridProgram, "waveAnimationTimeInSeconds"), waveAnimationTimeInSeconds);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "zFar"), Z_FAR);
                 glUniform1f(glGetUniformLocation(waterGridProgram, "zNear"), Z_NEAR);
+
+                if (projectorNewPitchDegrees < -65.0f)
+                    glUniform1f(glGetUniformLocation(waterGridProgram, "tessLevel"), 1.0f);
+                else if (projectorNewPitchDegrees < -45.0f)
+                    glUniform1f(glGetUniformLocation(waterGridProgram, "tessLevel"), 2.0f);
+                else
+                    glUniform1f(glGetUniformLocation(waterGridProgram, "tessLevel"), 3.0f);
 
                 // draw...
                 // POINT, LINE or FILL...
