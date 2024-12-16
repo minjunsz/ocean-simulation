@@ -44,8 +44,15 @@ static wave 구현
 realistic visual effect 구현
 
 1. wave foam effect 구현
-   * `water-grid.tes` (Line 69-82, 94-96)에서 jacobian 계산
-   * `water-grid.frag` (Line 119-124)에서 jacobian에 따른 wave foam 색상 변경
+   * `water-grid.tes` (Line 69-82, 94-96)에서 wave-vertex position displacement jacobian 계산
+   * `water-grid.frag` (Line 83)에서 reflection color를 통해 jacobian에 따른 wave foam 구현
+   * `water-grid.frag` (Line -)에서 변수 선언 및 함수 계산 등을 더욱 직관적으로 개선 및 약간의 최적화 진행
+
+2. local reflection 구현
+   * `water-grid.frag` (Line 60-81), `render-engine.cpp` (Line 145-170, 225-226, 425, 947-948, 1258-1264), `render-engine.h` (Line 297-300)에서 local reflection framebuffer 및 동작 구현
+
+3. skybox texture 제작
+   * `assets\textures\skyboxes\wwwtyro-space-3d\2drp4i9sx0lc-nebulae-2048` 폴더 내의 skybox images를 open sourse skybox images를 base로 edit하여 현 프로젝트에 알맞도록 제작
 
 ### 2024-29163 이상엽
 
