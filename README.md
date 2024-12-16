@@ -58,3 +58,11 @@ realistic visual effect 구현
 
 dynamic wave 구현
 
+1. dynamic wave 구현
+   * `water-grid.tes` (Line 39-50, 105-106) height map sampling하는 위치에 시간에 따라 변화하는 offset을 더함으로써 높낮이 변경
+   * `water-grid.tes` (Line 115-116) 시간에따라 전체 수면 높이를 위아래로 움직여 자연스러운 움직임 연출
+
+2. multi-frequency Gerstner wave 구현
+   * `render-engine.cpp` (Line 921-936) multi-frequency rendering
+   * `program.cpp` (Line 193-218, 609-626) imgui를 통해 여러 종류의 파도를 랜덤하게 생성
+   * shared pointer를 통한 메모리 관리
