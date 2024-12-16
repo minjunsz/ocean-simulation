@@ -671,49 +671,22 @@ namespace wave_tool
         //  render water...
         if (nullptr != waterGrid && waterGrid->m_isVisible && 0 != m_skyboxCubemap)
         {
-
-            // reference: https://fileadmin.cs.lth.se/graphics/theses/projects/projgrid/
-            // NOTE: this code closely follows the algorithm laid out by the demo at the above reference
+            static geometry::Plane upperPlane{0.0f, 1.0f, 0.0f, 0.0f};
+            static geometry::Plane basePlane{0.0f, 1.0f, 0.0f, 0.0f};
+            static geometry::Plane lowerPlane{0.0f, 1.0f, 0.0f, 0.0f};
+            static float cachedAmplitude = -1.0f;
 
             // the displaceable volume is defined by the maximum possible amplitude of all the wave summations
             float const DISPLACEABLE_AMPLITUDE = geometry::GerstnerWave::TotalAmplitude() + heightmapDisplacementScale + verticalBounceWaveAmplitude;
-            // TODO: figure out if the below line causes any issues (cause it seems like it would be slightly more efficient)
-            // float const DISPLACEABLE_AMPLITUDE = geometry::GerstnerWave::TotalAmplitude() + heightmapDisplacementScale + glm::abs(verticalBounceWaveDisplacement);
 
-            geometry::Plane const upperPlane{0.0f, 1.0f, 0.0f, DISPLACEABLE_AMPLITUDE};
-            geometry::Plane const basePlane{0.0f, 1.0f, 0.0f, 0.0f};
-            geometry::Plane const lowerPlane{0.0f, 1.0f, 0.0f, -DISPLACEABLE_AMPLITUDE};
-
-            // reference: https://gamedev.stackexchange.com/questions/29999/how-do-i-create-a-bounding-frustum-from-a-view-projection-matrix
-            // reference: https://stackoverflow.com/questions/7692988/opengl-math-projecting-screen-space-to-world-space-coords
-            // reference: https://www.gamedev.net/forums/topic/644571-calculating-frustum-corners-from-a-projection-matrix/
-            // initialize in NDC-space
-            std::array<glm::vec4, 8> frustumCornerPoints{glm::vec4{-1.0f, -1.0f, -1.0f, 1.0f}, // [0] - (lbn) - left / bottom / near
-                                                         glm::vec4{-1.0f, -1.0f, 1.0f, 1.0f},  // [1] - (lbf) - left / bottom / far
-                                                         glm::vec4{-1.0f, 1.0f, -1.0f, 1.0f},  // [2] - (ltn) - left / top / near
-                                                         glm::vec4{-1.0f, 1.0f, 1.0f, 1.0f},   // [3] - (ltf) - left / top / far
-                                                         glm::vec4{1.0f, -1.0f, -1.0f, 1.0f},  // [4] - (rbn) - right / bottom / near
-                                                         glm::vec4{1.0f, -1.0f, 1.0f, 1.0f},   // [5] - (rbf) - right / bottom / far
-                                                         glm::vec4{1.0f, 1.0f, -1.0f, 1.0f},   // [6] - (rtn) - right / top / near
-                                                         glm::vec4{1.0f, 1.0f, 1.0f, 1.0f}};   // [7] - (rtf) - right / top / far
-
-            // scale XY-NDC to account for Gerstner wave XZ-world displacement...
-            // TODO: dynamically set this scale based on wave settings (so that the frustum is as small as possible - reduce overdraw)
-            // TODO: also scale the grid resolution so it stays roughly the same, so that it doesnt change based on these settings
-            // TODO: this still needs a lot of work (i.e. account for FOV / window size ???)
-            float const SAFETY_PADDING_SCALAR = 1.2f;
-            for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i)
+            if (cachedAmplitude != DISPLACEABLE_AMPLITUDE)
             {
-                frustumCornerPoints.at(i).x *= SAFETY_PADDING_SCALAR;
-                frustumCornerPoints.at(i).y *= SAFETY_PADDING_SCALAR;
+                cachedAmplitude = DISPLACEABLE_AMPLITUDE;
+                upperPlane = {0.0f, 1.0f, 0.0f, DISPLACEABLE_AMPLITUDE};
+                lowerPlane = {0.0f, 1.0f, 0.0f, -DISPLACEABLE_AMPLITUDE};
             }
 
-            // transform into world-space...
-            for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i)
-            {
-                glm::vec4 const temp{inverseViewProjection * frustumCornerPoints.at(i)};
-                frustumCornerPoints.at(i) = temp / temp.w;
-            }
+            auto frustumCornerPoints = transformFrustumCorners(inverseViewProjection, 1.2f);
 
             // stores indices into frustumCornerPoints
             // 12 edges between pairs of points
@@ -742,6 +715,9 @@ namespace wave_tool
 
                 geometry::Line const line{frustumCornerPoints.at(src), frustumCornerPoints.at(dest)};
 
+                if (glm::max(line.p0.y, line.p1.y) < -DISPLACEABLE_AMPLITUDE || glm::min(line.p0.y, line.p1.y) > DISPLACEABLE_AMPLITUDE)
+                    continue; // Edge is completely outside the displaceable volume
+
                 // upper-bound plane
                 // first, we do a quick intersection check (plane in this case can be described by all points with y = d, since the normal is <0,1,0>)
                 if (glm::min(line.p0.y, line.p1.y) <= upperPlane.d && upperPlane.d <= glm::max(line.p0.y, line.p1.y))
@@ -767,27 +743,21 @@ namespace wave_tool
 
             // include any frustum vertices that lie within (intersect) the displaceable volume (between upper and lower bounding planes)
             // for each frustum vertex...
-            for (unsigned int i = 0; i < frustumCornerPoints.size(); ++i)
+            auto isWithinVolume = [&](const glm::vec4 &point)
             {
-                glm::vec4 const &frustumCornerPoint{frustumCornerPoints.at(i)};
-                // we do a quick intersection check (planes in this case can be described by all points with y = d, since both have normals as <0, 1, 0>)
-                if (lowerPlane.d <= frustumCornerPoint.y && frustumCornerPoint.y <= upperPlane.d)
-                    intersectionPoints.push_back(frustumCornerPoint);
+                return point.y >= -DISPLACEABLE_AMPLITUDE && point.y <= DISPLACEABLE_AMPLITUDE;
+            };
+            for (const auto &corner : frustumCornerPoints)
+            {
+                if (isWithinVolume(corner))
+                {
+                    intersectionPoints.push_back(corner);
+                }
             }
 
             // only continue to render the water grid, if there were intersection points
             if (!intersectionPoints.empty())
             {
-                ///////////////////////////////////////////////////////////////////////////////////
-                // create projector...
-                // rules...
-                //  1. should never aim away from base plane
-                //  2. eye position must be outside visible volume (thus eye.y <= lowerPlane.d OR eye.y >= upperPlane.d)
-                //  3. provide the most "pleasant" possible projector transformation
-                // NOTE: due to how the triangle mesh is tessellated, the winding will always be counter-clockwise, regardless of whether the projector is above or below the base plane
-                // NOTE: the projector will only differ from the camera in its position.y and pitch, thus we can just clone the camera and then apply a translation + set pitch
-                // NOTE: there are two aimpoints that get interpolated between based on the camera's forward vector - two extreme cases (1. abs(cameraForward • <0,1,0>) == 1 (bird's eye) and 2. cameraForward • <0,1,0> == 0 (horizon)
-
                 Camera projector{*m_camera};
 
                 float const cameraDistanceFromBasePlane{m_camera->getPosition().y};
@@ -857,9 +827,9 @@ namespace wave_tool
                 ///////////////////////////////////////////////////////////////////////////////////
 
                 // project all intersection points onto base plane...
-                for (unsigned int i = 0; i < intersectionPoints.size(); ++i)
+                for (auto &point : intersectionPoints)
                 {
-                    intersectionPoints.at(i).y = 0.0f;
+                    point.y = 0.0f;
                 }
 
                 // transform all intersection points into NDC-space (for projector)
@@ -874,31 +844,20 @@ namespace wave_tool
                 }
 
                 // determine the xy-NDC bounds of the intersection points
-                float x_min = intersectionPoints.at(0).x;
-                float x_max = intersectionPoints.at(0).x;
-                float y_min = intersectionPoints.at(0).y;
-                float y_max = intersectionPoints.at(0).y;
-                for (unsigned int i = 1; i < intersectionPoints.size(); ++i)
-                {
-                    if (intersectionPoints.at(i).x < x_min)
-                        x_min = intersectionPoints.at(i).x;
-                    else if (intersectionPoints.at(i).x > x_max)
-                        x_max = intersectionPoints.at(i).x;
+                // clang-format off
+                float x_min = std::min_element(intersectionPoints.begin(), intersectionPoints.end(),
+                    [](const glm::vec4& a, const glm::vec4& b) { return a.x < b.x; })->x;
 
-                    if (intersectionPoints.at(i).y < y_min)
-                        y_min = intersectionPoints.at(i).y;
-                    else if (intersectionPoints.at(i).y > y_max)
-                        y_max = intersectionPoints.at(i).y;
-                }
+                float x_max = std::max_element(intersectionPoints.begin(), intersectionPoints.end(),
+                    [](const glm::vec4& a, const glm::vec4& b) { return a.x < b.x; })->x;
 
-                // setup the range conversion matrix (in column-major order)
-                // will be used to convert from a special uv-space ("range-space")
-                //
-                // |x_max - x_min,       0      , 0, x_min|
-                // |      0      , y_max - y_min, 0, y_min|
-                // |      0      ,       0      , 1,   0  |
-                // |      0      ,       0      , 0,   1  |
-                //
+                float y_min = std::min_element(intersectionPoints.begin(), intersectionPoints.end(),
+                    [](const glm::vec4& a, const glm::vec4& b) { return a.y < b.y; })->y;
+
+                float y_max = std::max_element(intersectionPoints.begin(), intersectionPoints.end(),
+                    [](const glm::vec4& a, const glm::vec4& b) { return a.y < b.y; })->y;
+                // clang-format on
+
                 glm::mat4 const rangeMat{x_max - x_min, 0.0f, 0.0f, 0.0f,
                                          0.0f, y_max - y_min, 0.0f, 0.0f,
                                          0.0f, 0.0f, 1.0f, 0.0f,
@@ -1307,5 +1266,31 @@ namespace wave_tool
         glBindTexture(GL_TEXTURE_2D, m_worldSpaceDepthTexture2D);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_windowWidth, m_windowHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
         glBindTexture(GL_TEXTURE_2D, 0);
+    }
+
+    std::array<glm::vec4, 8> RenderEngine::transformFrustumCorners(const glm::mat4 &inverseViewProjection, float safetyPadding)
+    {
+        // Initialize frustum corners in NDC space
+        std::array<glm::vec4, 8> corners = {
+            glm::vec4{-1.0f, -1.0f, -1.0f, 1.0f},
+            glm::vec4{-1.0f, -1.0f, 1.0f, 1.0f},
+            glm::vec4{-1.0f, 1.0f, -1.0f, 1.0f},
+            glm::vec4{-1.0f, 1.0f, 1.0f, 1.0f},
+            glm::vec4{1.0f, -1.0f, -1.0f, 1.0f},
+            glm::vec4{1.0f, -1.0f, 1.0f, 1.0f},
+            glm::vec4{1.0f, 1.0f, -1.0f, 1.0f},
+            glm::vec4{1.0f, 1.0f, 1.0f, 1.0f},
+        };
+
+        // Apply safety padding and transform to world space
+        for (auto &corner : corners)
+        {
+            corner.x *= safetyPadding;
+            corner.y *= safetyPadding;
+            corner = inverseViewProjection * corner; // Transform to world space
+            corner /= corner.w;                      // Perspective divide
+        }
+
+        return corners;
     }
 }

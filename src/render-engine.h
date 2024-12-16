@@ -304,6 +304,8 @@ namespace wave_tool
         GLuint m_skyboxFBO{0};
         int m_windowHeight{0};
         int m_windowWidth{0};
+
+        std::array<glm::vec4, 8> transformFrustumCorners(const glm::mat4 &inverseViewProjection, float safetyPadding);
     };
 }
 
