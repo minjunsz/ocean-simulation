@@ -190,6 +190,33 @@ namespace wave_tool
             m_renderEngine->cloudProportion = glm::clamp(m_renderEngine->cloudProportion, 0.0f, 0.3f);
         }
 
+        static int GerstnerWaveCount = 4;
+        if (ImGui::InputInt("Gerstner Wave Count", &GerstnerWaveCount, 1, 1))
+        {
+            GerstnerWaveCount = glm::clamp(GerstnerWaveCount, 1, 4);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Generate"))
+        {
+            for (int i = 0; i < geometry::GerstnerWave::MAX_COUNT; ++i)
+            {
+                if (i < GerstnerWaveCount)
+                {
+                    float A, w, phi, steep;
+                    glm::vec2 dir;
+                    A = getRandomFloat(0.05f, 0.15f);   // amplitude: 0.05 ~ 0.15
+                    w = getRandomFloat(0.5f, 2.0f);     // frequency: 0.5 ~ 2.0
+                    phi = getRandomFloat(0.3f, 1.0f);   // phase: 0.3 ~ 1.0
+                    steep = getRandomFloat(0.0f, 1.0f); // steepness: 0.0 ~ 1.0
+                    dir = getRandomDirection();
+                    m_renderEngine->gerstnerWaves.at(i) = nullptr;
+                    m_renderEngine->gerstnerWaves.at(i) = std::make_shared<geometry::GerstnerWave>(A, w, phi, steep, dir);
+                }
+                else
+                    m_renderEngine->gerstnerWaves.at(i) = nullptr;
+            }
+        }
+
         ImGui::Separator();
 
         ImGui::Text("WATER-GRID POLYGON MODE:");
@@ -577,6 +604,25 @@ namespace wave_tool
         queryGLVersion();
 
         return true;
+    }
+
+    // 랜덤 생성을 위한 함수
+    glm::vec2 Program::getRandomDirection()
+    {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        static std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
+
+        glm::vec2 dir(dis(gen), dis(gen));
+        return glm::normalize(dir);
+    }
+
+    float Program::getRandomFloat(float min, float max)
+    {
+        static std::random_device rd;
+        static std::mt19937 gen(rd());
+        std::uniform_real_distribution<float> dis(min, max);
+        return dis(gen);
     }
 
     void errorCallback(int error, char const *description)

@@ -43,6 +43,8 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <random>
+#include <glm/glm.hpp>
 
 struct GLFWwindow;
 
@@ -83,6 +85,9 @@ namespace wave_tool
         void queryGLVersion();
         // initializes GLFW and creates the window
         bool setupWindow();
+
+        glm::vec2 getRandomDirection();
+        float getRandomFloat(float min, float max);
     };
 
     // functions passed to GLFW to handle errors and keyboard input
